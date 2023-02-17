@@ -1,6 +1,7 @@
 # MemPool
 
 This project shows how a memory pool can be implemented in order to offer scalable solution for high bandwidth nerwork applications.
+The idea is to have 1 receive thread with N worker threads.
 
 ## Usage
 
