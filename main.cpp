@@ -5,19 +5,19 @@
 
 int main()
 {
-    constexpr auto capacity = 3;
+    constexpr auto capacity = 1;
     constexpr auto packet_size = 10;
 
-    MemPool pool(capacity, packet_size);
+    auto pool = MemPool::create(capacity, packet_size);
 
-    std::vector<uint8_t> buffer(packet_size, 'a');
-    auto block_address = pool.getAddress();
-    std::memcpy(block_address, buffer.data(), buffer.size());
+    std::vector<uint8_t> src_buffer(packet_size, 'a');
+    std::vector<uint8_t> dest_buffer(packet_size, '0');
 
-    std::vector<uint8_t> buffer2(packet_size, '0');
-    std::memcpy(buffer2.data(), block_address, packet_size);
+    auto addr_ptr = pool->getAddress();
+    std::memcpy(*addr_ptr, src_buffer.data(), packet_size);
+    std::memcpy(dest_buffer.data(), *addr_ptr, packet_size);
 
-    std::cout << buffer2.data() << std::endl;
+    std::cout << dest_buffer.data() << std::endl;
 
     return 0;
 }
