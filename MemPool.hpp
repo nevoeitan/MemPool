@@ -7,7 +7,7 @@
 
 #include "FixedHeap.hpp"
 
-class MemPool
+class MemPool : public std::enable_shared_from_this<MemPool>
 {
     FixedHeap _heap;
 
@@ -21,30 +21,17 @@ class MemPool
     std::mutex _mutex;
 
 public:
-    MemPool(uint64_t capacity,
-            uint64_t packet_size)
-            :
-            _heap(capacity, packet_size)
+    static std::shared_ptr<MemPool> create(uint64_t capacity, uint64_t packet_size)
     {
-        buildIndexMapping();
+        return std::shared_ptr<MemPool>(new MemPool(capacity, packet_size));
     }
 
-    uint8_t* getAddress()
+    std::shared_ptr<uint8_t*> getAddress()
     {
-        while(_alloc_queue.empty())
-        {
-            std::lock_guard<std::mutex> lock(_mutex);
+        ensureAddressAvailable();
+        auto address = popAvailableAddress();
 
-            _alloc_queue = std::move(_free_queue);
-        }
-
-        auto data_block = _alloc_queue.front();
-        _alloc_queue.pop();
-
-        auto smart_data_block = data_block.lock();
-        auto address = *smart_data_block;
-
-        return address;
+        return createSmartAddress(address);
     }
 
     void freeAddress(uint8_t* address)
@@ -56,6 +43,14 @@ public:
     }
 
 private:
+    MemPool(uint64_t capacity,
+            uint64_t packet_size)
+            :
+            _heap(capacity, packet_size)
+    {
+        buildIndexMapping();
+    }
+
     void buildIndexMapping()
     {
         auto capacity = _heap.getCapacity();
@@ -68,5 +63,34 @@ private:
             _map[block_address] = smart_data_block;
             _alloc_queue.emplace(std::move(smart_data_block));
         }
+    }
+
+    void ensureAddressAvailable()
+    {
+        while(_alloc_queue.empty())
+        {
+            std::lock_guard<std::mutex> lock(_mutex);
+
+            _alloc_queue.swap(_free_queue);
+        }
+    }
+
+    uint8_t* popAvailableAddress()
+    {
+        auto data_block = _alloc_queue.front();
+        _alloc_queue.pop();
+        auto smart_data_block = data_block.lock();
+
+        return *smart_data_block;
+    }
+
+    std::shared_ptr<uint8_t*> createSmartAddress(uint8_t* address)
+    {
+        auto shared_this = shared_from_this();
+
+        return {new uint8_t*(address), [shared_this](uint8_t** address)
+        {
+            shared_this->freeAddress(*address);
+        }};
     }
 };
