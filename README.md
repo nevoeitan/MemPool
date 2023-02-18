@@ -10,9 +10,10 @@ To use the code include MemPool.hpp
 ## Example
 Here is an exmaple from main.cpp:
 ```
-MemPool pool(capacity, packet_size);
+auto pool = MemPool::create(capacity, packet_size);
 
-auto block_address = pool.getAddress();
-// Do receive on address and required calculations
-pool.freeAddress(block_address);
+{
+    auto block_address_ptr = pool->getAddress();
+    // Do receive on address and required calculations
+}//Address released back to pool automatically
 ```
