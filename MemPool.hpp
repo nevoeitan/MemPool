@@ -91,6 +91,7 @@ private:
         return {new uint8_t*(address), [shared_this](uint8_t** address)
         {
             shared_this->freeAddress(*address);
+            delete address;
         }};
     }
 };
